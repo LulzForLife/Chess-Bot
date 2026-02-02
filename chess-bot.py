@@ -12,7 +12,7 @@ PIECE_VALUES = {
 }
 INF = float('inf')
 
-def evalulate(b: chess.Board) -> float:
+def evaluate(b: chess.Board) -> float:
     '''
     Docstring for evalulate
     
@@ -29,31 +29,50 @@ def evalulate(b: chess.Board) -> float:
         evaluation += value
     if b.is_checkmate():
         evaluation = INF
+    elif b.is_stalemate():
+        evaluation = 0
     if b.turn == chess.WHITE:
         evaluation = -evaluation
     return evaluation
 
-def best_move(b: chess.Board) -> chess.Move:
+def _search_moves(b: chess.Board, depth: int) -> tuple[chess.Move, float]:
     '''
-    Docstring for best_move
+    Docstring for _search_moves
     
     :param b: The board to find the best move for
     :type b: chess.Board
+    :param depth: The depth to search to
+    :type depth: int
     :return: The positions best move in the position
-    :rtype: Move
+    :rtype: tuple[Move, float]
     '''
-    moves = b.legal_moves
-    best_move = random.choice(list(moves))
+    moves = list(b.legal_moves)
+    best_move = random.choice(moves)
     best_eval = -INF
     for move in moves:
         b.push(move)
-        evaluation = evalulate(b)
-        print(repr(board), evaluation)
+        if depth > 1:
+            evaluation = -(_search_moves(b, depth - 1)[1])
+        else: 
+            evaluation = evaluate(b)
+        b.pop()
         if evaluation > best_eval:
             best_eval = evaluation
             best_move = move
-        b.pop()
-    return best_move
+    return (best_move, best_eval)
+
+def get_best_move(b: chess.Board, *, depth: int = 1) -> chess.Move:
+    '''     
+    Docstring for get_best_move
+    
+    :param b: The board to find the best move for
+    :type b: chess.Board
+    :param depth: The depth to search to
+    :type depth: int
+    :return: The positions best move in the position
+    :rtype: Move
+    '''
+    return _search_moves(b, depth)[0]
 
 board = chess.Board()
 print(board)
@@ -64,7 +83,8 @@ while not board.is_game_over():
         move = chess.Move.from_uci(input('Enter move: '))
     board.push(move)
     print(board)
-    move = best_move(board)
+    print('Bot is thinking...')
+    move = get_best_move(board, depth = 3)
     board.push(move)
     print(board)
     print(f'Bot played: {move}')
