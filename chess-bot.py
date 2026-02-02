@@ -12,6 +12,21 @@ PIECE_VALUES = {
 }
 INF = float('inf')
 
+def get_user_move(b: chess.Board) -> chess.Move:
+    move = input('Enter move (e.g. e2e4): ')
+    try:
+        chess_move = chess.Move.from_uci(move)
+    except chess.InvalidMoveError:
+        chess_move = chess.Move.from_uci('0000')
+    while not b.is_legal(chess_move):
+        print(f'Invalid move: \'{move}\'')
+        try:
+            move = input('Enter move (e.g. e2e4): ')
+            chess_move = chess.Move.from_uci(move)
+        except chess.InvalidMoveError:
+            continue
+    return chess_move
+
 def evaluate(b: chess.Board) -> float:
     '''
     Docstring for evalulate
@@ -78,9 +93,7 @@ board = chess.Board()
 print(board)
 
 while not board.is_game_over():
-    move = chess.Move.from_uci('0000')
-    while not board.is_legal(move):
-        move = chess.Move.from_uci(input('Enter move: '))
+    move = get_user_move(board)
     board.push(move)
     print(board)
     print('Bot is thinking...')
