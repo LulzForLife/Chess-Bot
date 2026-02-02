@@ -29,7 +29,7 @@ def evalulate(b: chess.Board) -> float:
         evaluation += value
     if b.is_checkmate():
         evaluation = INF
-    if b.turn == chess.BLACK:
+    if b.turn == chess.WHITE:
         evaluation = -evaluation
     return evaluation
 
@@ -48,6 +48,7 @@ def best_move(b: chess.Board) -> chess.Move:
     for move in moves:
         b.push(move)
         evaluation = evalulate(b)
+        print(repr(board), evaluation)
         if evaluation > best_eval:
             best_eval = evaluation
             best_move = move
