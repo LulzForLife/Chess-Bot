@@ -10,6 +10,7 @@ PIECE_VALUES = {
     'n': 300.0,
     'p': 100.0
 }
+INF = float('inf')
 
 def evalulate(b: chess.Board) -> float:
     '''
@@ -21,13 +22,15 @@ def evalulate(b: chess.Board) -> float:
     :rtype: float
     '''
     evaluation = 0.0
-    if b.turn == chess.BLACK:
-        b = b.mirror()
     for square, piece in b.piece_map().items():
         value = PIECE_VALUES[piece.symbol().lower()]
         if piece.color == chess.BLACK:
             value = -value
         evaluation += value
+    if b.is_checkmate():
+        evaluation = INF
+    if b.turn == chess.BLACK:
+        evaluation = -evaluation
     return evaluation
 
 def best_move(b: chess.Board) -> chess.Move:
@@ -41,7 +44,7 @@ def best_move(b: chess.Board) -> chess.Move:
     '''
     moves = b.legal_moves
     best_move = random.choice(list(moves))
-    best_eval = -float('inf')
+    best_eval = -INF
     for move in moves:
         b.push(move)
         evaluation = evalulate(b)
