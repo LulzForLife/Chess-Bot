@@ -1,5 +1,6 @@
 import chess
 import random
+import sys
 
 # the base piece values in centipawns
 PIECE_VALUES = {
@@ -165,6 +166,56 @@ def get_user_move(b: chess.Board) -> chess.Move:
             continue
     return chess_move
 
+def uci_loop():
+    sys.stdout.reconfigure(line_buffering=True) # pyright: ignore[reportAttributeAccessIssue]
+
+    board = chess.Board()
+    while True:
+        line = sys.stdin.readline()
+        if not line:
+            break
+        line = line.strip()
+        parts = line.split()
+        if not parts:
+            continue
+
+        if parts[0] == "uci":
+            print("id name KikiBot")
+            print("id author kiranmjlowe")
+            print("uciok", flush=True)
+            
+        elif parts[0] == "isready":
+            print("readyok", flush=True)
+            
+        elif parts[0] == "position":
+            if "startpos" in parts:
+                board = chess.Board()
+            elif "fen" in parts:
+                # Find where 'moves' starts to isolate the FEN
+                fen_end = parts.index("moves") if "moves" in parts else len(parts)
+                fen_string = " ".join(parts[parts.index("fen")+1 : fen_end])
+                board = chess.Board(fen_string)
+            
+            if "moves" in parts:
+                for move in parts[parts.index("moves") + 1:]:
+                    board.push_uci(move)
+
+        elif parts[0] == "go":
+            # Pass the board to your search function
+            move = get_best_move(board, depth=3)
+            
+            # Validation (Good safety net!)
+            if move not in board.legal_moves:
+                move = random.choice(list(board.legal_moves))
+            
+            print(f"bestmove {move.uci()}", flush=True)
+
+        elif parts[0] == "ucinewgame":
+            board = chess.Board() 
+
+        elif parts[0] == "quit":
+            break
+
 def evaluate(b: chess.Board) -> float:
     '''
     Docstring for evalulate
@@ -248,5 +299,7 @@ def main() -> None:
     print('Game over!')
 
 if __name__ == '__main__':
-    #main()
-    test_cases()
+    main()
+    #test_cases()
+else:
+    uci_loop()
