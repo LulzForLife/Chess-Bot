@@ -233,7 +233,7 @@ def evaluate(b: chess.Board) -> float:
     evaluation = 0.0
     for square, piece in b.piece_map().items():
         value = PIECE_VALUES[piece.symbol().lower()]
-        if piece.color == b.turn:
+        if piece.color != b.turn:
             value = -value
         evaluation += value
     return evaluation
