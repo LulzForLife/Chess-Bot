@@ -139,10 +139,15 @@ ENDGAME_BONUS = {
 INF = float('inf')
 
 def test_cases() -> None:
-    assert get_best_move(chess.Board('1k6/8/1K6/8/4R3/8/8/8 w - - 0 1')) == chess.Move.from_uci('e4e8')
-    assert get_best_move(chess.Board('8/8/8/3r4/8/6k1/8/6K1 b - - 0 1')) == chess.Move.from_uci('d5d1')
-    assert get_best_move(chess.Board('8/k1P5/8/1K6/8/8/5PBB/8 w - - 0 1')) == chess.Move.from_uci('c7c8n')
-    print('Success!')
+    '''
+    Docstring for test_cases
+    '''
+    def test(fen: str, expected: str) -> bool:
+        return get_best_move(chess.Board(fen)) == chess.Move.from_uci(expected)
+    assert test('1k6/8/1K6/8/4R3/8/8/8 w - - 0 1', 'e4e8')
+    assert test('8/8/8/3r4/8/6k1/8/6K1 b - - 0 1', 'd5d1')
+    assert test('8/k1P5/8/1K6/8/8/5PBB/8 w - - 0 1', 'c7c8n')
+    print('All tests passed!')
 
 def get_user_move(b: chess.Board) -> chess.Move:
     move = input('Enter move (e.g. e2e4): ')
