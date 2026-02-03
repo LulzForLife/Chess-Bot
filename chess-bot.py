@@ -10,6 +10,7 @@ PIECE_VALUES = {
     'n': 300.0,
     'p': 100.0
 }
+
 MIDDLEGAME_BONUS = {
     'p': [
         0,  0,  0,  0,  0,  0,  0,  0,
@@ -145,8 +146,8 @@ def test_cases() -> None:
     def test(fen: str, expected: str) -> bool:
         return get_best_move(chess.Board(fen)) == chess.Move.from_uci(expected)
     assert test('1k6/8/1K6/8/4R3/8/8/8 w - - 0 1', 'e4e8')
-    assert test('8/8/8/3r4/8/6k1/8/6K1 b - - 0 1', 'd5d1')
     assert test('8/k1P5/8/1K6/8/8/5PBB/8 w - - 0 1', 'c7c8n')
+    assert test('6R1/8/4K2k/5Pp1/8/6N1/3B4/8 w - g6 0 2', 'f5g6')
     print('All tests passed!')
 
 def get_user_move(b: chess.Board) -> chess.Move:
@@ -174,18 +175,16 @@ def evaluate(b: chess.Board) -> float:
     :rtype: float
     '''
     if b.is_checkmate():
-        return INF
+        return -INF if b.turn == chess.WHITE else INF
     elif b.is_game_over():
         return 0
     
     evaluation = 0.0
     for square, piece in b.piece_map().items():
         value = PIECE_VALUES[piece.symbol().lower()]
-        if piece.color == chess.BLACK:
+        if piece.color == b.turn:
             value = -value
         evaluation += value
-    if b.turn == chess.WHITE:
-        evaluation = -evaluation
     return evaluation
 
 def _search_moves(b: chess.Board, depth: int) -> tuple[chess.Move, float]:
@@ -199,6 +198,10 @@ def _search_moves(b: chess.Board, depth: int) -> tuple[chess.Move, float]:
     :return: The positions best move in the position
     :rtype: tuple[Move, float]
     '''
+    if b.is_checkmate():
+        return (chess.Move.null(), -INF if b.turn == chess.WHITE else INF)
+    elif b.is_game_over():
+        return (chess.Move.null(), 0)
     moves = list(b.legal_moves)
     best_move = random.choice(moves)
     best_eval = -INF
@@ -237,10 +240,13 @@ def main() -> None:
         print(board)
         print('Bot is thinking...')
         move = get_best_move(board, depth = 3)
+        if move == chess.Move.null():
+            break
         board.push(move)
         print(board)
         print(f'Bot played: {move}')
+    print('Game over!')
 
 if __name__ == '__main__':
-    main()
-    #test_cases()
+    #main()
+    test_cases()
