@@ -263,8 +263,12 @@ def evaluate(b: chess.Board) -> float:
     for square, piece in b.piece_map().items():
         symbol = piece.symbol().lower()
         value = PIECE_VALUES[symbol]
-        middlegame_value = MIDDLEGAME_BONUS[symbol][MIRROR_BOARD[square]]
-        endgame_value = ENDGAME_BONUS[symbol][MIRROR_BOARD[square]]
+        if b.turn == chess.WHITE:
+            idx = MIRROR_BOARD[square]
+        else:
+            idx = int(square)
+        middlegame_value = MIDDLEGAME_BONUS[symbol][idx]
+        endgame_value = ENDGAME_BONUS[symbol][idx]
         # lerp
         value += (t * middlegame_value + (1 - t) * endgame_value)
 
@@ -334,7 +338,7 @@ def main() -> None:
     print('Game over!')
 
 if __name__ == '__main__':
-    main()
+    #main()
     #test_cases()
     pass
 uci_loop()
