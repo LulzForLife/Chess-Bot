@@ -12,14 +12,14 @@ PIECE_VALUES = {
     'p': 100.0
 }
 
-# simple piece values for middle/endgame phasing
-SIMPLE_PIECE_VALUES = {
-    'k': 60,
-    'q': 9,
-    'r': 5,
-    'b': 3,
-    'n': 3,
-    'p': 1
+# phase piece values
+PHASE_VALUES = {
+    'k': 0,
+    'q': 4,
+    'r': 2,
+    'b': 1,
+    'n': 1,
+    'p': 0
 }
 
 # the bonus tables for the middlegame and endgame
@@ -253,12 +253,11 @@ def evaluate(b: chess.Board) -> float:
     elif b.is_game_over():
         return 0
     
-    endgame = 62
+    endgame = 24
     for square, piece in b.piece_map().items():
-        if not piece.piece_type in {chess.PAWN, chess.KING}:
-            endgame -= SIMPLE_PIECE_VALUES[piece.symbol().lower()]
+        endgame -= PHASE_VALUES[piece.symbol().lower()]
     
-    t = endgame / 62
+    t = endgame / 24
     
     evaluation = 0.0
     for square, piece in b.piece_map().items():
