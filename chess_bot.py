@@ -4,17 +4,17 @@ import sys
 
 # the base piece values in centipawns
 PIECE_VALUES = {
-    'k': 20000.0,
+    'k': 60000.0,
     'q': 900.0,
-    'r': 500.0,
-    'b': 330.0,
-    'n': 300.0,
+    'r': 490.0,
+    'b': 320.0,
+    'n': 290.0,
     'p': 100.0
 }
 
 # simple piece values for middle/endgame phasing
 SIMPLE_PIECE_VALUES = {
-    'k': 20,
+    'k': 60,
     'q': 9,
     'r': 5,
     'b': 3,
@@ -23,6 +23,7 @@ SIMPLE_PIECE_VALUES = {
 }
 
 # the bonus tables for the middlegame and endgame
+# TODO: Get better PSQTs
 MIDDLEGAME_BONUS = {
     'p': [
         0,  0,  0,  0,  0,  0,  0,  0,
