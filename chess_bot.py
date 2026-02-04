@@ -162,13 +162,15 @@ MIRROR_BOARD = [
 ]
 
 INF = float('inf')
+DEPTH = 4
+USE_UCI = "--uci" in sys.argv
 
 def test_cases() -> None:
     '''
     Docstring for test_cases
     '''
     def test(fen: str, expected: str) -> bool:
-        return get_best_move(chess.Board(fen)) == chess.Move.from_uci(expected)
+        return get_best_move(chess.Board(fen), depth = DEPTH) == chess.Move.from_uci(expected)
     assert test('1k6/8/1K6/8/4R3/8/8/8 w - - 0 1', 'e4e8')
     assert test('8/k1P5/8/1K6/8/8/5PBB/8 w - - 0 1', 'c7c8n')
     assert test('6R1/8/4K2k/5Pp1/8/6N1/3B4/8 w - g6 0 2', 'f5g6')
@@ -225,7 +227,7 @@ def uci_loop():
 
         elif parts[0] == "go":
             # Pass the board to your search function
-            move = get_best_move(board, depth=3)
+            move = get_best_move(board, depth=DEPTH)
             
             # Validation (Good safety net!)
             if move not in board.legal_moves:
@@ -277,7 +279,7 @@ def evaluate(b: chess.Board) -> float:
         evaluation += value
     return evaluation
 
-def _search_moves(b: chess.Board, depth: int) -> tuple[chess.Move, float]:
+def _search_moves(b: chess.Board, depth: int, alpha: float, beta: float) -> tuple[chess.Move, float]:
     '''
     Docstring for _search_moves
     
@@ -289,23 +291,25 @@ def _search_moves(b: chess.Board, depth: int) -> tuple[chess.Move, float]:
     :rtype: tuple[Move, float]
     '''
     if b.is_checkmate():
-        return (chess.Move.null(), -INF if b.turn == chess.WHITE else INF)
+        return (chess.Move.null(), -INF)
     elif b.is_game_over():
         return (chess.Move.null(), 0)
     moves = list(b.legal_moves)
     best_move = random.choice(moves)
-    best_eval = -INF
     for move in moves:
         b.push(move)
         if depth > 1:
-            evaluation = -(_search_moves(b, depth - 1)[1])
+            evaluation = -(_search_moves(b, depth - 1, -beta, -alpha)[1])
         else: 
             evaluation = -evaluate(b)
         b.pop()
-        if evaluation > best_eval:
-            best_eval = evaluation
+        if evaluation >= beta:
+            return (chess.Move.null(), beta)
+        if evaluation > alpha:
+            alpha = evaluation
             best_move = move
-    return (best_move, best_eval)
+
+    return (best_move, alpha)
 
 def get_best_move(b: chess.Board, *, depth: int = 1) -> chess.Move:
     '''     
@@ -318,7 +322,7 @@ def get_best_move(b: chess.Board, *, depth: int = 1) -> chess.Move:
     :return: The positions best move in the position
     :rtype: Move
     '''
-    return _search_moves(b, depth)[0]
+    return _search_moves(b, depth, -INF, INF)[0]
 
 def main() -> None:
     board = chess.Board()
@@ -329,7 +333,7 @@ def main() -> None:
         board.push(move)
         print(board)
         print('Bot is thinking...')
-        move = get_best_move(board, depth = 3)
+        move = get_best_move(board, depth = DEPTH)
         if move == chess.Move.null():
             break
         board.push(move)
@@ -338,7 +342,8 @@ def main() -> None:
     print('Game over!')
 
 if __name__ == '__main__':
-    #main()
-    #test_cases()
-    pass
-uci_loop()
+    if not USE_UCI:
+        main()
+        #test_cases()
+    else:
+        uci_loop()
