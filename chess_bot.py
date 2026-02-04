@@ -253,12 +253,12 @@ def evaluate(b: chess.Board) -> float:
     elif b.is_game_over():
         return 0
     
-    endgame = 24
+    endgame = 62
     for square, piece in b.piece_map().items():
         if not piece.piece_type in {chess.PAWN, chess.KING}:
             endgame -= SIMPLE_PIECE_VALUES[piece.symbol().lower()]
     
-    t = endgame / 24
+    t = endgame / 62
     
     evaluation = 0.0
     for square, piece in b.piece_map().items():
@@ -271,7 +271,7 @@ def evaluate(b: chess.Board) -> float:
         middlegame_value = MIDDLEGAME_BONUS[symbol][idx]
         endgame_value = ENDGAME_BONUS[symbol][idx]
         # lerp
-        value += (t * middlegame_value + (1 - t) * endgame_value)
+        value += (t * endgame_value + (1 - t) * middlegame_value)
 
         if piece.color != b.turn:
             value = -value
