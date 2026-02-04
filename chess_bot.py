@@ -12,6 +12,17 @@ PIECE_VALUES = {
     'p': 100.0
 }
 
+# simple piece values for middle/endgame phasing
+SIMPLE_PIECE_VALUES = {
+    'k': 20,
+    'q': 9,
+    'r': 5,
+    'b': 3,
+    'n': 3,
+    'p': 1
+}
+
+# the bonus tables for the middlegame and endgame
 MIDDLEGAME_BONUS = {
     'p': [
         0,  0,  0,  0,  0,  0,  0,  0,
@@ -74,7 +85,6 @@ MIDDLEGAME_BONUS = {
         20, 30, 10,  0,  0, 10, 30, 20
     ]
 }
-
 ENDGAME_BONUS = {
     'p': [
         0,  0,  0,  0,  0,  0,  0,  0,
@@ -137,6 +147,18 @@ ENDGAME_BONUS = {
         -50,-30,-30,-30,-30,-30,-30,-50
     ]
 }
+
+# a list for mirroring squares
+MIRROR_BOARD = [
+    56, 57, 58, 59, 60, 61, 62, 63,
+    48, 49, 50, 51, 52, 53, 54, 55,
+    40, 41, 42, 43, 44, 45, 46, 47,
+    32, 33, 34, 35, 36, 37, 38, 39,
+    24, 25, 26, 27, 28, 29, 30, 31,
+    16, 17, 18, 19, 20, 21, 22, 23,
+    8,  9,  10, 11, 12, 13, 14, 15,
+    0,  1,  2,  3,  4,  5,  6,  7,
+]
 
 INF = float('inf')
 
@@ -230,9 +252,22 @@ def evaluate(b: chess.Board) -> float:
     elif b.is_game_over():
         return 0
     
+    endgame = 24
+    for square, piece in b.piece_map().items():
+        if not piece.piece_type in {chess.PAWN, chess.KING}:
+            endgame -= SIMPLE_PIECE_VALUES[piece.symbol().lower()]
+    
+    t = endgame / 24
+    
     evaluation = 0.0
     for square, piece in b.piece_map().items():
-        value = PIECE_VALUES[piece.symbol().lower()]
+        symbol = piece.symbol().lower()
+        value = PIECE_VALUES[symbol]
+        middlegame_value = MIDDLEGAME_BONUS[symbol][MIRROR_BOARD[square]]
+        endgame_value = ENDGAME_BONUS[symbol][MIRROR_BOARD[square]]
+        # lerp
+        value += (t * middlegame_value + (1 - t) * endgame_value)
+
         if piece.color != b.turn:
             value = -value
         evaluation += value
@@ -261,7 +296,7 @@ def _search_moves(b: chess.Board, depth: int) -> tuple[chess.Move, float]:
         if depth > 1:
             evaluation = -(_search_moves(b, depth - 1)[1])
         else: 
-            evaluation = evaluate(b)
+            evaluation = -evaluate(b)
         b.pop()
         if evaluation > best_eval:
             best_eval = evaluation
@@ -301,5 +336,6 @@ def main() -> None:
 if __name__ == '__main__':
     main()
     #test_cases()
+    pass
 else:
     uci_loop()
