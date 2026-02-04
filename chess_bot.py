@@ -337,5 +337,4 @@ if __name__ == '__main__':
     main()
     #test_cases()
     pass
-else:
-    uci_loop()
+uci_loop()
