@@ -164,7 +164,8 @@ MIRROR_BOARD = [
 ]
 
 INF = float('inf')
-DEPTH = 3
+DEPTH = 4
+CAPTURE_EXTENSION = False
 USE_UCI = "--uci" in sys.argv
 
 class HashBoard(chess.Board):
@@ -333,8 +334,11 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, num_exten
         extension = int(b.is_check()) if num_extensions < 16 else 0
         if depth > 1:
             evaluation = -(_search_moves(b, depth - 1 + extension, -beta, -alpha, num_extensions + extension)[1])
-        else: 
-            evaluation = -(_search_captures(b, -beta, -alpha))
+        else:
+            if CAPTURE_EXTENSION:
+                evaluation = -(_search_captures(b, -beta, -alpha))
+            else:
+                evaluation = -evaluate(b)
         b.pop()
         if evaluation >= beta:
             return (chess.Move.null(), beta)
