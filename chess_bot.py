@@ -4,6 +4,20 @@ import chess.polyglot as polyglot
 import random
 import sys
 
+class HashBoard(chess.Board):
+    def __init__(self, fen: str | None = STARTING_FEN, *, chess960: bool = False) -> None: # pyright: ignore[reportArgumentType]
+        super().__init__(fen, chess960 = chess960)
+    def __hash__(self) -> int:
+        return polyglot.zobrist_hash(self)
+
+class TTEntry:
+    __slots__ = ("value", "depth", "flag", "best")
+    def __init__(self, value, depth, flag, best):
+        self.value = value
+        self.depth = depth
+        self.flag = flag
+        self.best = best
+
 # the base piece values in centipawns
 PIECE_VALUES = {
     'k': 60000.0,
@@ -165,14 +179,13 @@ MIRROR_BOARD = [
 
 INF = float('inf')
 DEPTH = 4
-CAPTURE_EXTENSION = False
+CAPTURE_EXTENSION = True
 USE_UCI = "--uci" in sys.argv
+EXACT, LOWER, UPPER = 0, 1, 2
+TT: dict[int, TTEntry] = {}
 
-class HashBoard(chess.Board):
-    def __init__(self, fen: str | None = STARTING_FEN, *, chess960: bool = False) -> None: # pyright: ignore[reportArgumentType]
-        super().__init__(fen, chess960 = chess960)
-    def __hash__(self) -> int:
-        return polyglot.zobrist_hash(self)
+positions = 0
+hits = 0
 
 def test_cases() -> None:
     '''
@@ -275,7 +288,7 @@ def evaluate(b: HashBoard) -> float:
     for square, piece in b.piece_map().items():
         symbol = piece.symbol().lower()
         value = PIECE_VALUES[symbol]
-        if b.turn == chess.WHITE:
+        if piece.color == chess.WHITE:
             idx = MIRROR_BOARD[square]
         else:
             idx = int(square)
@@ -311,7 +324,8 @@ def _search_captures(b: HashBoard, alpha: float, beta: float) -> float:
 
     return alpha
 
-def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float) -> tuple[chess.Move, float]:
+def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only: bool = True) -> chess.Move | float:
+    global positions, hits
     '''
     Docstring for _search_moves
     
@@ -322,30 +336,71 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float) -> tuple[
     :return: The position\'s best move and evaluation
     :rtype: tuple[Move, float]
     '''
+    positions += 1
+
+    alpha_orig = alpha
+    key = hash(b)
+
+    entry = TT.get(key)
+    if entry and entry.depth >= depth:
+        
+        hits += 1
+
+        if entry.flag == EXACT:
+            return entry.value if eval_only else entry.best
+        elif entry.flag == LOWER:
+            alpha = max(alpha, entry.value)
+        elif entry.flag == UPPER:
+            beta = min(beta, entry.value)
+
+        if alpha >= beta:
+            return entry.value if eval_only else entry.best
+
     if b.is_checkmate():
-        return (chess.Move.null(), -INF)
+        return -INF if eval_only else chess.Move.null()
     elif b.is_game_over():
-        return (chess.Move.null(), 0)
+        return 0 if eval_only else chess.Move.null()
+
+    best_move = None
+    value = -INF
 
     moves = list(b.legal_moves)
-    best_move = random.choice(moves)
+
+    if entry and entry.best in moves:
+        moves.remove(entry.best)
+        moves.insert(0, entry.best)
+
     for move in moves:
         b.push(move)
+
         if depth > 1:
-            evaluation = -(_search_moves(b, depth - 1, -beta, -alpha)[1])
+            evaluation = -(_search_moves(b, depth - 1, -beta, -alpha)) # pyright: ignore[reportOperatorIssue]
         else:
             if CAPTURE_EXTENSION:
                 evaluation = -(_search_captures(b, -beta, -alpha))
             else:
                 evaluation = -evaluate(b)
+        
         b.pop()
-        if evaluation >= beta:
-            return (chess.Move.null(), beta)
-        if evaluation > alpha:
-            alpha = evaluation
-            best_move = move
 
-    return (best_move, alpha)
+        if evaluation > value:
+            value = evaluation
+            best_move = move
+        
+        alpha = max(alpha, evaluation)
+        if alpha >= beta:
+            break
+
+    if value <= alpha_orig:
+        flag = UPPER
+    elif value >= beta:
+        flag = LOWER
+    else:
+        flag = EXACT
+
+    TT[key] = TTEntry(value, depth, flag, best_move)
+
+    return value if eval_only else best_move # pyright: ignore[reportReturnType]
 
 def get_best_move(b: HashBoard, *, depth: int = 1) -> chess.Move:
     '''     
@@ -358,9 +413,16 @@ def get_best_move(b: HashBoard, *, depth: int = 1) -> chess.Move:
     :return: The position\'s best move
     :rtype: Move
     '''
-    return _search_moves(b, depth, -INF, INF)[0]
+    best = chess.Move.null()
+
+    for d in range(1, depth + 1):
+        best = _search_moves(b, d, -INF, INF, eval_only = False)
+
+    return best # pyright: ignore[reportReturnType]
 
 def main() -> None:
+    global positions, hits
+
     board = HashBoard()
     print(board)
 
@@ -369,12 +431,15 @@ def main() -> None:
         board.push(move)
         print(board)
         print('Bot is thinking...')
+        positions = 0
+        hits = 0
         move = get_best_move(board, depth = DEPTH)
         if move == chess.Move.null():
             break
         board.push(move)
         print(board)
         print(f'Bot played: {move}')
+        print(f'{positions} positions, {hits} hit')
     print('Game over!')
 
 if __name__ == '__main__':
