@@ -164,7 +164,7 @@ MIRROR_BOARD = [
 ]
 
 INF = float('inf')
-DEPTH = 4
+DEPTH = 3
 USE_UCI = "--uci" in sys.argv
 
 class HashBoard(chess.Board):
@@ -288,6 +288,28 @@ def evaluate(b: HashBoard) -> float:
         evaluation += value
     return evaluation
 
+def _search_captures(b: HashBoard, alpha: float, beta: float) -> float:
+    evaluation = evaluate(b)
+    if evaluation >= beta:
+        return beta
+    if evaluation > alpha:
+        alpha = evaluation
+    
+    capture_moves = filter(b.is_capture, b.legal_moves)
+
+    for move in capture_moves:
+        b.push(move)
+        evaluation = -(_search_captures(b, -beta, -alpha))
+        b.pop()
+
+        if evaluation >= beta:
+            return beta
+        
+        if evaluation > alpha:
+            alpha = evaluation
+
+    return alpha
+
 def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float) -> tuple[chess.Move, float]:
     '''
     Docstring for _search_moves
@@ -311,7 +333,7 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float) -> tuple[
         if depth > 1:
             evaluation = -(_search_moves(b, depth - 1, -beta, -alpha)[1])
         else: 
-            evaluation = -evaluate(b)
+            evaluation = -(_search_captures(b, -beta, -alpha))
         b.pop()
         if evaluation >= beta:
             return (chess.Move.null(), beta)
