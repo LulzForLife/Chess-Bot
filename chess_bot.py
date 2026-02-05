@@ -310,7 +310,7 @@ def _search_captures(b: HashBoard, alpha: float, beta: float) -> float:
 
     return alpha
 
-def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float) -> tuple[chess.Move, float]:
+def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, num_extensions: int) -> tuple[chess.Move, float]:
     '''
     Docstring for _search_moves
     
@@ -330,8 +330,9 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float) -> tuple[
     best_move = random.choice(moves)
     for move in moves:
         b.push(move)
+        extension = int(b.is_check()) if num_extensions < 16 else 0
         if depth > 1:
-            evaluation = -(_search_moves(b, depth - 1, -beta, -alpha)[1])
+            evaluation = -(_search_moves(b, depth - 1 + extension, -beta, -alpha, num_extensions + extension)[1])
         else: 
             evaluation = -(_search_captures(b, -beta, -alpha))
         b.pop()
@@ -354,7 +355,7 @@ def get_best_move(b: HashBoard, *, depth: int = 1) -> chess.Move:
     :return: The position\'s best move
     :rtype: Move
     '''
-    return _search_moves(b, depth, -INF, INF)[0]
+    return _search_moves(b, depth, -INF, INF, 0)[0]
 
 def main() -> None:
     board = HashBoard()
