@@ -338,7 +338,7 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, num_exten
             if CAPTURE_EXTENSION:
                 evaluation = -(_search_captures(b, -beta, -alpha))
             else:
-                evaluation = evaluate(b)
+                evaluation = -evaluate(b)
         b.pop()
         if evaluation >= beta:
             return (chess.Move.null(), beta)
