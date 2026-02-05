@@ -1,4 +1,6 @@
 import chess
+from chess import STARTING_FEN
+import chess.polyglot as polyglot
 import random
 import sys
 
@@ -165,18 +167,24 @@ INF = float('inf')
 DEPTH = 4
 USE_UCI = "--uci" in sys.argv
 
+class HashBoard(chess.Board):
+    def __init__(self, fen: str | None = STARTING_FEN, *, chess960: bool = False) -> None: # pyright: ignore[reportArgumentType]
+        super().__init__(fen, chess960 = chess960)
+    def __hash__(self) -> int:
+        return polyglot.zobrist_hash(self)
+
 def test_cases() -> None:
     '''
     Docstring for test_cases
     '''
     def test(fen: str, expected: str) -> bool:
-        return get_best_move(chess.Board(fen), depth = DEPTH) == chess.Move.from_uci(expected)
+        return get_best_move(HashBoard(fen), depth = DEPTH) == chess.Move.from_uci(expected)
     assert test('1k6/8/1K6/8/4R3/8/8/8 w - - 0 1', 'e4e8')
     assert test('8/k1P5/8/1K6/8/8/5PBB/8 w - - 0 1', 'c7c8n')
     assert test('6R1/8/4K2k/5Pp1/8/6N1/3B4/8 w - g6 0 2', 'f5g6')
     print('All tests passed!')
 
-def get_user_move(b: chess.Board) -> chess.Move:
+def get_user_move(b: HashBoard) -> chess.Move:
     move = input('Enter move (e.g. e2e4): ')
     try:
         chess_move = chess.Move.from_uci(move)
@@ -191,10 +199,11 @@ def get_user_move(b: chess.Board) -> chess.Move:
             continue
     return chess_move
 
+# this was generated with Gemini
 def uci_loop():
     sys.stdout.reconfigure(line_buffering=True) # pyright: ignore[reportAttributeAccessIssue]
 
-    board = chess.Board()
+    board = HashBoard()
     while True:
         line = sys.stdin.readline()
         if not line:
@@ -214,12 +223,12 @@ def uci_loop():
             
         elif parts[0] == "position":
             if "startpos" in parts:
-                board = chess.Board()
+                board = HashBoard()
             elif "fen" in parts:
                 # Find where 'moves' starts to isolate the FEN
                 fen_end = parts.index("moves") if "moves" in parts else len(parts)
                 fen_string = " ".join(parts[parts.index("fen")+1 : fen_end])
-                board = chess.Board(fen_string)
+                board = HashBoard(fen_string)
             
             if "moves" in parts:
                 for move in parts[parts.index("moves") + 1:]:
@@ -236,17 +245,17 @@ def uci_loop():
             print(f"bestmove {move.uci()}", flush=True)
 
         elif parts[0] == "ucinewgame":
-            board = chess.Board() 
+            board = HashBoard() 
 
         elif parts[0] == "quit":
             break
 
-def evaluate(b: chess.Board) -> float:
+def evaluate(b: HashBoard) -> float:
     '''
     Docstring for evalulate
     
     :param b: The input board
-    :type b: chess.Board
+    :type b: HashBoard
     :return: An evaluation of the position
     :rtype: float
     '''
@@ -279,21 +288,22 @@ def evaluate(b: chess.Board) -> float:
         evaluation += value
     return evaluation
 
-def _search_moves(b: chess.Board, depth: int, alpha: float, beta: float) -> tuple[chess.Move, float]:
+def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float) -> tuple[chess.Move, float]:
     '''
     Docstring for _search_moves
     
     :param b: The board to find the best move for
-    :type b: chess.Board
+    :type b: HashBoard
     :param depth: The depth to search to
     :type depth: int
-    :return: The positions best move in the position
+    :return: The position\'s best move and evaluation
     :rtype: tuple[Move, float]
     '''
     if b.is_checkmate():
         return (chess.Move.null(), -INF)
     elif b.is_game_over():
         return (chess.Move.null(), 0)
+
     moves = list(b.legal_moves)
     best_move = random.choice(moves)
     for move in moves:
@@ -311,21 +321,21 @@ def _search_moves(b: chess.Board, depth: int, alpha: float, beta: float) -> tupl
 
     return (best_move, alpha)
 
-def get_best_move(b: chess.Board, *, depth: int = 1) -> chess.Move:
+def get_best_move(b: HashBoard, *, depth: int = 1) -> chess.Move:
     '''     
     Docstring for get_best_move
     
     :param b: The board to find the best move for
-    :type b: chess.Board
+    :type b: HashBoard
     :param depth: The depth to search to
     :type depth: int
-    :return: The positions best move in the position
+    :return: The position\'s best move
     :rtype: Move
     '''
     return _search_moves(b, depth, -INF, INF)[0]
 
 def main() -> None:
-    board = chess.Board()
+    board = HashBoard()
     print(board)
 
     while not board.is_game_over():
