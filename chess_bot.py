@@ -326,13 +326,9 @@ def ordered_moves(b: HashBoard, depth: int, tt_move = None):
     return sorted(b.legal_moves, key = score, reverse = True)
 
 def _extend_search(b: HashBoard, alpha: float, beta: float, depth: int = 0):
-    global positions, hits
-    positions += 1
     key = hash(b)
-
     entry = TT.get(key)
     if entry:
-        hits += 1
         if entry.flag == EXACT:
             return entry.value
         elif entry.flag == LOWER:
@@ -344,29 +340,28 @@ def _extend_search(b: HashBoard, alpha: float, beta: float, depth: int = 0):
 
     stand = evaluate(b)
     if stand >= beta:
+        TT[key] = TTEntry(stand, 0, LOWER, None)
         return beta
     alpha = max(alpha, stand)
 
-    moves = ordered_moves(b, depth)
-    for m in moves:
+    value = alpha
+
+    for m in ordered_moves(b, depth):
         if not (b.is_capture(m) or m.promotion or b.gives_check(m)):
             break
-
         b.push(m)
         score = -_extend_search(b, -beta, -alpha, depth + 1)
         b.pop()
 
         if score >= beta:
-            if not b.is_capture(m):
-                KILLER2[depth] = KILLER1[depth]
-                KILLER1[depth] = m # pyright: ignore[reportCallIssue, reportArgumentType]
-                HISTORY[m.from_square][m.to_square] += (depth + 1) ** 2
+            TT[key] = TTEntry(score, 0, LOWER, m)
             return beta
 
+        value = max(value, score)
         alpha = max(alpha, score)
 
-    TT[key] = TTEntry(alpha, 0, UPPER, None)
-    return alpha
+    TT[key] = TTEntry(value, 0, EXACT, None)
+    return value
 
 def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only: bool = True) -> float | tuple[chess.Move, float]:
     '''
