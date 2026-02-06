@@ -179,11 +179,17 @@ MIRROR_BOARD = [
 ]
 
 INF = float('inf')
+
 TIME_LIMIT = 5
+DEPTH_LIMIT = 5
 CAPTURE_EXTENSION = False
 USE_UCI = "--uci" in sys.argv
+
 EXACT, LOWER, UPPER = 0, 1, 2
 TT: dict[int, TTEntry] = {}
+
+MIDDLEGAME_CHECK_PENALTY = 30
+ENDGAME_CHECK_PENALTY = 50
 
 positions = 0
 hits = 0
@@ -302,7 +308,18 @@ def evaluate(b: HashBoard) -> float:
         if piece.color != b.turn:
             value = -value
         evaluation += value
+    
+    if b.is_check():
+        evaluation -= (ENDGAME_CHECK_PENALTY * t + MIDDLEGAME_CHECK_PENALTY * (1 - t))
+
     return evaluation
+
+def ordered_moves(b: HashBoard) -> list[chess.Move]:
+    quiet, caps = [], []
+    for move in b.legal_moves:
+        if b.is_capture(move): caps.append(move) 
+        else: quiet.append(move)
+    return caps + quiet
 
 def _search_captures(b: HashBoard, alpha: float, beta: float) -> float:
     evaluation = evaluate(b)
@@ -366,7 +383,7 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
     best_move = None
     value = -INF
 
-    moves = list(b.legal_moves)
+    moves = ordered_moves(b)
 
     if entry and entry.best in moves:
         moves.remove(entry.best)
@@ -420,7 +437,7 @@ def get_best_move(b: HashBoard, time: int | float) -> chess.Move:
 
     s = t.time()
 
-    for depth in range(1, 9):
+    for depth in range(1, DEPTH_LIMIT + 1):
         if t.time() - s > time:
             break
         best = _search_moves(b, depth, -INF, INF, eval_only = False)
