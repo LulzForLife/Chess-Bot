@@ -188,9 +188,6 @@ USE_UCI = "--uci" in sys.argv
 EXACT, LOWER, UPPER = 0, 1, 2
 TT: dict[int, TTEntry] = {}
 
-MIDDLEGAME_CHECK_PENALTY = 0
-ENDGAME_CHECK_PENALTY = 0
-
 positions = 0
 hits = 0
 s = 0
@@ -308,9 +305,6 @@ def evaluate(b: HashBoard) -> float:
         if piece.color != b.turn:
             value = -value
         evaluation += value
-    
-    if b.is_check():
-        evaluation -= (ENDGAME_CHECK_PENALTY * t + MIDDLEGAME_CHECK_PENALTY * (1 - t))
 
     return evaluation
 
