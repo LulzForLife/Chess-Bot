@@ -3,6 +3,7 @@ from chess import STARTING_FEN
 import chess.polyglot as polyglot
 import random
 import sys
+import time as t
 
 class HashBoard(chess.Board):
     def __init__(self, fen: str | None = STARTING_FEN, *, chess960: bool = False) -> None: # pyright: ignore[reportArgumentType]
@@ -178,7 +179,7 @@ MIRROR_BOARD = [
 ]
 
 INF = float('inf')
-DEPTH = 5
+TIME_LIMIT = 5
 CAPTURE_EXTENSION = False
 USE_UCI = "--uci" in sys.argv
 EXACT, LOWER, UPPER = 0, 1, 2
@@ -186,13 +187,14 @@ TT: dict[int, TTEntry] = {}
 
 positions = 0
 hits = 0
+s = 0
 
 def test_cases() -> None:
     '''
     Docstring for test_cases
     '''
     def test(fen: str, expected: str) -> bool:
-        return get_best_move(HashBoard(fen), depth = DEPTH) == chess.Move.from_uci(expected)
+        return get_best_move(HashBoard(fen), time = TIME_LIMIT) == chess.Move.from_uci(expected)
     assert test('1k6/8/1K6/8/4R3/8/8/8 w - - 0 1', 'e4e8')
     assert test('8/k1P5/8/1K6/8/8/5PBB/8 w - - 0 1', 'c7c8n')
     assert test('6R1/8/4K2k/5Pp1/8/6N1/3B4/8 w - g6 0 2', 'f5g6')
@@ -250,7 +252,7 @@ def uci_loop():
 
         elif parts[0] == "go":
             # Pass the board to your search function
-            move = get_best_move(board, depth=DEPTH)
+            move = get_best_move(board, time = TIME_LIMIT)
             
             # Validation (Good safety net!)
             if move not in board.legal_moves:
@@ -402,22 +404,27 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
 
     return value if eval_only else best_move # pyright: ignore[reportReturnType]
 
-def get_best_move(b: HashBoard, *, depth: int = 1) -> chess.Move:
+def get_best_move(b: HashBoard, time: int | float) -> chess.Move:
+    global s
     '''     
     Docstring for get_best_move
     
     :param b: The board to find the best move for
     :type b: HashBoard
-    :param depth: The depth to search to
-    :type depth: int
+    :param depth: How long to search for
+    :type time: int | depth
     :return: The position\'s best move
     :rtype: Move
     '''
     best = chess.Move.null()
 
-    for d in range(1, depth + 1):
-        best = _search_moves(b, d, -INF, 0, eval_only = False)
-        print(f'Depth: {d}', end = '\r')
+    s = t.time()
+
+    for depth in range(1, 9):
+        if t.time() - s > time:
+            break
+        best = _search_moves(b, depth, -INF, INF, eval_only = False)
+        print(f'Depth: {depth}', end = '\r')
 
     return best # pyright: ignore[reportReturnType]
 
@@ -434,7 +441,7 @@ def main() -> None:
         print('Bot is thinking...')
         positions = 0
         hits = 0
-        move = get_best_move(board, depth = DEPTH)
+        move = get_best_move(board, time = TIME_LIMIT)
         if move == chess.Move.null():
             break
         board.push(move)
