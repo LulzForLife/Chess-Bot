@@ -361,7 +361,7 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
         hits += 1
 
         if entry.flag == EXACT:
-            return entry.value if eval_only else entry.best
+            return entry.value if eval_only else (entry.best, entry.value)
         elif entry.flag == LOWER:
             alpha = max(alpha, entry.value)
         elif entry.flag == UPPER:
@@ -373,7 +373,7 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
     if b.is_checkmate():
         return -INF if eval_only else (chess.Move.null(), -INF)
     elif b.is_game_over():
-        return 0 if eval_only else (chess.Move.null(), 0.0)
+        return 0.0 if eval_only else (chess.Move.null(), 0.0)
 
     best_move = None
     value = -INF
@@ -462,7 +462,7 @@ def main() -> None:
         board.push(move)
         print(board)
         print(f'Bot played: {move}')
-        print(f'{positions} position | {hits} hit | evaluation {evaluation} | depth {depth}')
+        print(f'{positions} positions | {hits} hit | evaluation {evaluation} | depth {depth}')
     print('Game over!')
 
 if __name__ == '__main__':
