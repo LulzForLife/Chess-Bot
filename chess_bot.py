@@ -187,6 +187,9 @@ USE_UCI = "--uci" in sys.argv
 
 EXACT, LOWER, UPPER = 0, 1, 2
 TT: dict[int, TTEntry] = {}
+KILLER1 = [None] * 64
+KILLER2 = [None] * 64
+HISTORY = [[0]*64 for _ in range(64)]
 
 positions = 0
 hits = 0
@@ -307,11 +310,19 @@ def evaluate(b: HashBoard) -> float:
 
     return evaluation
 
-def ordered_moves(b: HashBoard):
+def ordered_moves(b: HashBoard, depth: int, tt_move = None):
     def score(m: chess.Move):
-        if (captured := b.piece_at(m.to_square)):
-            return 10000 + PIECE_VALUES[captured.symbol().lower()]
-        return 0
+        s = 0
+        if tt_move and m == tt_move:
+            return 20000
+        if (cap := b.piece_at(m.to_square)):
+            return 10000 + PIECE_VALUES[cap.symbol().lower()]
+        if m == KILLER1[depth]:
+            s += 9000
+        elif m == KILLER2[depth]:
+            s += 8000
+        s += HISTORY[m.from_square][m.to_square]
+        return s
     return sorted(b.legal_moves, key = score, reverse = True)
 
 def _extend_search(b: HashBoard, alpha: float, beta: float):
@@ -321,7 +332,7 @@ def _extend_search(b: HashBoard, alpha: float, beta: float):
     
     alpha = max(alpha, stand)
 
-    for m in ordered_moves(b):
+    for m in ordered_moves(b, 0):
         if not (b.is_capture(m) or m.promotion or b.gives_check(m)):
             break
 
@@ -380,11 +391,8 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
     best_move = None
     value = -INF
 
-    moves = ordered_moves(b)
-
-    if entry and entry.best in moves:
-        moves.remove(entry.best)
-        moves.insert(0, entry.best)
+    tt_move = entry.best if entry else None
+    moves = ordered_moves(b, depth, tt_move)
 
     for move in moves:
         b.push(move)
@@ -405,7 +413,15 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
         
         alpha = max(alpha, evaluation)
         if alpha >= beta:
+            if not b.is_capture(move):
+                # killer update
+                KILLER2[depth] = KILLER1[depth]
+                KILLER1[depth] = move
+
+                # history update
+                HISTORY[move.from_square][move.to_square] += depth * depth
             break
+
 
     if value <= alpha_orig:
         flag = UPPER
