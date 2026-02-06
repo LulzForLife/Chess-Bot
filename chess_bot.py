@@ -436,12 +436,9 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
         alpha = max(alpha, evaluation)
         if alpha >= beta:
             if not b.is_capture(move):
-                # killer update
                 idx = max(0, min(depth, len(KILLER1) - 1))
                 KILLER2[idx] = KILLER1[idx]
                 KILLER1[idx] = move # pyright: ignore[reportCallIssue, reportArgumentType]
-
-                # history update
                 HISTORY[move.from_square][move.to_square] += depth * depth
             break
 
@@ -492,9 +489,9 @@ def main() -> None:
     print(board)
 
     while not board.is_game_over():
-        #move = get_user_move(board)
-        #board.push(move)
-        #print(board)
+        move = get_user_move(board)
+        board.push(move)
+        print(board)
         print('Bot is thinking...')
         positions = 0
         hits = 0
