@@ -317,15 +317,21 @@ def ordered_moves(b: HashBoard, depth: int, tt_move = None):
             return 20000
         if (cap := b.piece_at(m.to_square)):
             return 10000 + PIECE_VALUES[cap.symbol().lower()]
-        if m == KILLER1[depth]:
+        idx = max(0, min(depth, len(KILLER1) - 1))
+        if m == KILLER1[idx]:
             s += 9000
-        elif m == KILLER2[depth]:
+        elif m == KILLER2[idx]:
             s += 8000
         s += HISTORY[m.from_square][m.to_square]
         return s
     return sorted(b.legal_moves, key = score, reverse = True)
 
-def _extend_search(b: HashBoard, alpha: float, beta: float, depth: int = 0):
+def _extend_search(b: HashBoard, alpha: float, beta: float, depth: int = 0) -> float:
+    if b.is_checkmate():
+        return -INF
+    elif b.is_game_over():
+        return 0.0
+
     key = hash(b)
     entry = TT.get(key)
     if entry:
@@ -404,7 +410,7 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
     elif b.is_game_over():
         return 0.0 if eval_only else (chess.Move.null(), 0.0)
 
-    best_move = None
+    best_move = random.choice(list(b.legal_moves))
     value = -INF
 
     tt_move = entry.best if entry else None
@@ -431,8 +437,9 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
         if alpha >= beta:
             if not b.is_capture(move):
                 # killer update
-                KILLER2[depth] = KILLER1[depth]
-                KILLER1[depth] = move # pyright: ignore[reportCallIssue, reportArgumentType]
+                idx = max(0, min(depth, len(KILLER1) - 1))
+                KILLER2[idx] = KILLER1[idx]
+                KILLER1[idx] = move # pyright: ignore[reportCallIssue, reportArgumentType]
 
                 # history update
                 HISTORY[move.from_square][move.to_square] += depth * depth
@@ -462,7 +469,7 @@ def get_best_move(b: HashBoard, time: int | float) -> tuple[chess.Move, float, i
     :return: The position\'s best move
     :rtype: Move
     '''
-    best = chess.Move.null()
+    best = random.choice(list(b.legal_moves))
 
     s = t.time()
     d = 0
@@ -485,9 +492,9 @@ def main() -> None:
     print(board)
 
     while not board.is_game_over():
-        move = get_user_move(board)
-        board.push(move)
-        print(board)
+        #move = get_user_move(board)
+        #board.push(move)
+        #print(board)
         print('Bot is thinking...')
         positions = 0
         hits = 0
@@ -502,7 +509,12 @@ def main() -> None:
 
 if __name__ == '__main__':
     if not USE_UCI:
-        main()
+        #try:
+            main()
+        #except Exception as e:
+        #    print(e)
+        #    print(KILLER1)
+        #    print(KILLER2)
         #test_cases()
     else:
         uci_loop()
