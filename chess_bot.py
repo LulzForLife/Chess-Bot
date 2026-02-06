@@ -180,7 +180,7 @@ MIRROR_BOARD = [
 
 INF = float('inf')
 
-TIME_LIMIT = 5
+TIME_LIMIT = 3
 DEPTH_LIMIT = 100
 CAPTURE_EXTENSION = True
 USE_UCI = "--uci" in sys.argv
@@ -325,26 +325,47 @@ def ordered_moves(b: HashBoard, depth: int, tt_move = None):
         return s
     return sorted(b.legal_moves, key = score, reverse = True)
 
-def _extend_search(b: HashBoard, alpha: float, beta: float):
+def _extend_search(b: HashBoard, alpha: float, beta: float, depth: int = 0):
+    global positions, hits
+    positions += 1
+    key = hash(b)
+
+    entry = TT.get(key)
+    if entry:
+        hits += 1
+        if entry.flag == EXACT:
+            return entry.value
+        elif entry.flag == LOWER:
+            alpha = max(alpha, entry.value)
+        elif entry.flag == UPPER:
+            beta = min(beta, entry.value)
+        if alpha >= beta:
+            return entry.value
+
     stand = evaluate(b)
     if stand >= beta:
         return beta
-    
     alpha = max(alpha, stand)
 
-    for m in ordered_moves(b, 0):
+    moves = ordered_moves(b, depth)
+    for m in moves:
         if not (b.is_capture(m) or m.promotion or b.gives_check(m)):
             break
 
         b.push(m)
-        score = -_extend_search(b, -beta, -alpha)
+        score = -_extend_search(b, -beta, -alpha, depth + 1)
         b.pop()
 
         if score >= beta:
+            if not b.is_capture(m):
+                KILLER2[depth] = KILLER1[depth]
+                KILLER1[depth] = m # pyright: ignore[reportCallIssue, reportArgumentType]
+                HISTORY[m.from_square][m.to_square] += (depth + 1) ** 2
             return beta
-        
+
         alpha = max(alpha, score)
 
+    TT[key] = TTEntry(alpha, 0, UPPER, None)
     return alpha
 
 def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only: bool = True) -> float | tuple[chess.Move, float]:
@@ -416,7 +437,7 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
             if not b.is_capture(move):
                 # killer update
                 KILLER2[depth] = KILLER1[depth]
-                KILLER1[depth] = move
+                KILLER1[depth] = move # pyright: ignore[reportCallIssue, reportArgumentType]
 
                 # history update
                 HISTORY[move.from_square][move.to_square] += depth * depth
