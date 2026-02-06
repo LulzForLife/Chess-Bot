@@ -182,7 +182,7 @@ INF = float('inf')
 
 TIME_LIMIT = 3
 DEPTH_LIMIT = 9
-CAPTURE_EXTENSION = False
+CAPTURE_EXTENSION = True
 USE_UCI = "--uci" in sys.argv
 
 EXACT, LOWER, UPPER = 0, 1, 2
@@ -337,7 +337,6 @@ def _search_captures(b, alpha, beta):
     return alpha
 
 def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only: bool = True) -> float | tuple[chess.Move, float]:
-    global positions, hits
     '''
     Docstring for _search_moves
     
@@ -348,6 +347,10 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
     :return: The position\'s best move and evaluation
     :rtype: float | tuple[chess.Move, float]
     '''
+    global positions, hits
+    if t.time() - s > TIME_LIMIT:
+        raise TimeoutError
+
     positions += 1
 
     alpha_orig = alpha
@@ -432,11 +435,12 @@ def get_best_move(b: HashBoard, time: int | float) -> tuple[chess.Move, float, i
     s = t.time()
     d = 0
 
-    for depth in range(1, DEPTH_LIMIT + 1):
-        if t.time() - s > time:
+    for depth in range(1, DEPTH_LIMIT + 1): 
+        try:
+            best, evaluation = _search_moves(b.copy(), depth, -INF, INF, eval_only = False) # pyright: ignore[reportGeneralTypeIssues]
+        except TimeoutError:
             break
         d = depth
-        best, evaluation = _search_moves(b, depth, -INF, INF, eval_only = False) # pyright: ignore[reportGeneralTypeIssues]
         if not USE_UCI:
             print(f'Depth: {depth}', end = '\r')
 
@@ -461,7 +465,7 @@ def main() -> None:
         board.push(move)
         print(board)
         print(f'Bot played: {move}')
-        print(f'{positions} positions | {hits} hit | evaluation {evaluation} | depth {depth}')
+        print(f'{positions} positions | {hits} hit | evaluation {evaluation / 100} | depth {depth}')
     print('Game over!')
 
 if __name__ == '__main__':
