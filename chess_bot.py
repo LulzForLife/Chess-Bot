@@ -180,7 +180,7 @@ MIRROR_BOARD = [
 
 INF = float('inf')
 
-TIME_LIMIT = 5
+TIME_LIMIT = 3
 DEPTH_LIMIT = 9
 CAPTURE_EXTENSION = False
 USE_UCI = "--uci" in sys.argv
@@ -255,7 +255,7 @@ def uci_loop():
 
         elif parts[0] == "go":
             # Pass the board to your search function
-            move = get_best_move(board, time = TIME_LIMIT)
+            move = get_best_move(board, time = TIME_LIMIT)[0]
             
             # Validation (Good safety net!)
             if move not in board.legal_moves:
@@ -309,11 +309,12 @@ def evaluate(b: HashBoard) -> float:
     return evaluation
 
 def ordered_moves(b: HashBoard) -> list[chess.Move]:
-    quiet, caps = [], []
-    for move in b.legal_moves:
-        if b.is_capture(move): caps.append(move) 
-        else: quiet.append(move)
-    return caps + quiet
+    moves = list(b.legal_moves)
+    for move in moves:
+        if b.is_capture(move):
+            moves.remove(move)
+            moves.insert(0, move)
+    return moves
 
 def _search_captures(b: HashBoard, alpha: float, beta: float) -> float:
     evaluation = evaluate(b)
@@ -337,7 +338,7 @@ def _search_captures(b: HashBoard, alpha: float, beta: float) -> float:
 
     return alpha
 
-def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only: bool = True) -> chess.Move | float:
+def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only: bool = True) -> float | tuple[chess.Move, float]:
     global positions, hits
     '''
     Docstring for _search_moves
@@ -347,7 +348,7 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
     :param depth: The depth to search to
     :type depth: int
     :return: The position\'s best move and evaluation
-    :rtype: tuple[Move, float]
+    :rtype: float | tuple[chess.Move, float]
     '''
     positions += 1
 
@@ -367,12 +368,12 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
             beta = min(beta, entry.value)
 
         if alpha >= beta:
-            return entry.value if eval_only else entry.best
+            return entry.value if eval_only else (entry.best, entry.value)
 
     if b.is_checkmate():
-        return -INF if eval_only else chess.Move.null()
+        return -INF if eval_only else (chess.Move.null(), -INF)
     elif b.is_game_over():
-        return 0 if eval_only else chess.Move.null()
+        return 0 if eval_only else (chess.Move.null(), 0.0)
 
     best_move = None
     value = -INF
@@ -413,9 +414,9 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
 
     TT[key] = TTEntry(value, depth, flag, best_move)
 
-    return value if eval_only else best_move # pyright: ignore[reportReturnType]
+    return value if eval_only else (best_move, value) # pyright: ignore[reportReturnType]
 
-def get_best_move(b: HashBoard, time: int | float) -> chess.Move:
+def get_best_move(b: HashBoard, time: int | float) -> tuple[chess.Move, float, int]:
     global s
     '''     
     Docstring for get_best_move
@@ -430,14 +431,17 @@ def get_best_move(b: HashBoard, time: int | float) -> chess.Move:
     best = chess.Move.null()
 
     s = t.time()
+    d = 0
 
     for depth in range(1, DEPTH_LIMIT + 1):
         if t.time() - s > time:
             break
-        best = _search_moves(b, depth, -INF, INF, eval_only = False)
-        print(f'Depth: {depth}', end = '\r')
+        d = depth
+        best, evaluation = _search_moves(b, depth, -INF, INF, eval_only = False) # pyright: ignore[reportGeneralTypeIssues]
+        if not USE_UCI:
+            print(f'Depth: {depth}', end = '\r')
 
-    return best # pyright: ignore[reportReturnType]
+    return best, evaluation, d # pyright: ignore[reportPossiblyUnboundVariable, reportReturnType]
 
 def main() -> None:
     global positions, hits
@@ -452,13 +456,13 @@ def main() -> None:
         print('Bot is thinking...')
         positions = 0
         hits = 0
-        move = get_best_move(board, time = TIME_LIMIT)
+        move, evaluation, depth = get_best_move(board, time = TIME_LIMIT)
         if move == chess.Move.null():
             break
         board.push(move)
         print(board)
         print(f'Bot played: {move}')
-        print(f'{positions} positions, {hits} hit')
+        print(f'{positions} position | {hits} hit | evaluation {evaluation} | depth {depth}')
     print('Game over!')
 
 if __name__ == '__main__':
