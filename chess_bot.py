@@ -180,8 +180,8 @@ MIRROR_BOARD = [
 
 INF = float('inf')
 
-TIME_LIMIT = 3
-DEPTH_LIMIT = 9
+TIME_LIMIT = 5
+DEPTH_LIMIT = 100
 CAPTURE_EXTENSION = True
 USE_UCI = "--uci" in sys.argv
 
@@ -287,7 +287,7 @@ def evaluate(b: HashBoard) -> float:
     for square, piece in b.piece_map().items():
         phase += PHASE_VALUES[piece.symbol().lower()]
     
-    t = phase / 24
+    t = min(phase / 24, 1.0)
     
     evaluation = 0.0
     for square, piece in b.piece_map().items():
@@ -314,7 +314,7 @@ def ordered_moves(b: HashBoard):
         return 0
     return sorted(b.legal_moves, key = score, reverse = True)
 
-def _search_captures(b, alpha, beta):
+def _extend_search(b: HashBoard, alpha: float, beta: float):
     stand = evaluate(b)
     if stand >= beta:
         return beta
@@ -322,11 +322,11 @@ def _search_captures(b, alpha, beta):
     alpha = max(alpha, stand)
 
     for m in ordered_moves(b):
-        if not b.is_capture(m):
+        if not (b.is_capture(m) or m.promotion or b.gives_check(m)):
             break
 
         b.push(m)
-        score = -_search_captures(b, -beta, -alpha)
+        score = -_extend_search(b, -beta, -alpha)
         b.pop()
 
         if score >= beta:
@@ -393,7 +393,7 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
             evaluation = -(_search_moves(b, depth - 1, -beta, -alpha)) # pyright: ignore[reportOperatorIssue]
         else:
             if CAPTURE_EXTENSION:
-                evaluation = -(_search_captures(b, -beta, -alpha))
+                evaluation = -(_extend_search(b, -beta, -alpha))
             else:
                 evaluation = -evaluate(b)
         
