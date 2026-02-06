@@ -178,8 +178,8 @@ MIRROR_BOARD = [
 ]
 
 INF = float('inf')
-DEPTH = 4
-CAPTURE_EXTENSION = True
+DEPTH = 5
+CAPTURE_EXTENSION = False
 USE_UCI = "--uci" in sys.argv
 EXACT, LOWER, UPPER = 0, 1, 2
 TT: dict[int, TTEntry] = {}
@@ -416,7 +416,8 @@ def get_best_move(b: HashBoard, *, depth: int = 1) -> chess.Move:
     best = chess.Move.null()
 
     for d in range(1, depth + 1):
-        best = _search_moves(b, d, -INF, INF, eval_only = False)
+        best = _search_moves(b, d, -INF, 0, eval_only = False)
+        print(f'Depth: {d}', end = '\r')
 
     return best # pyright: ignore[reportReturnType]
 
