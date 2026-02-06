@@ -283,11 +283,11 @@ def evaluate(b: HashBoard) -> float:
     elif b.is_game_over():
         return 0
     
-    endgame = 24
+    phase = 0
     for square, piece in b.piece_map().items():
-        endgame -= PHASE_VALUES[piece.symbol().lower()]
+        phase += PHASE_VALUES[piece.symbol().lower()]
     
-    t = endgame / 24
+    t = phase / 24
     
     evaluation = 0.0
     for square, piece in b.piece_map().items():
@@ -299,8 +299,7 @@ def evaluate(b: HashBoard) -> float:
             idx = int(square)
         middlegame_value = MIDDLEGAME_BONUS[symbol][idx]
         endgame_value = ENDGAME_BONUS[symbol][idx]
-        # lerp
-        value += (t * endgame_value + (1 - t) * middlegame_value)
+        value += (t * middlegame_value + (1 - t) * endgame_value)
 
         if piece.color != b.turn:
             value = -value
@@ -308,33 +307,32 @@ def evaluate(b: HashBoard) -> float:
 
     return evaluation
 
-def ordered_moves(b: HashBoard) -> list[chess.Move]:
-    moves = list(b.legal_moves)
-    for move in moves:
-        if b.is_capture(move):
-            moves.remove(move)
-            moves.insert(0, move)
-    return moves
+def ordered_moves(b: HashBoard):
+    def score(m: chess.Move):
+        if (captured := b.piece_at(m.to_square)):
+            return 10000 + PIECE_VALUES[captured.symbol().lower()]
+        return 0
+    return sorted(b.legal_moves, key = score, reverse = True)
 
-def _search_captures(b: HashBoard, alpha: float, beta: float) -> float:
-    evaluation = evaluate(b)
-    if evaluation >= beta:
+def _search_captures(b, alpha, beta):
+    stand = evaluate(b)
+    if stand >= beta:
         return beta
-    if evaluation > alpha:
-        alpha = evaluation
     
-    capture_moves = filter(b.is_capture, b.legal_moves)
+    alpha = max(alpha, stand)
 
-    for move in capture_moves:
-        b.push(move)
-        evaluation = -(_search_captures(b, -beta, -alpha))
+    for m in ordered_moves(b):
+        if not b.is_capture(m):
+            break
+
+        b.push(m)
+        score = -_search_captures(b, -beta, -alpha)
         b.pop()
 
-        if evaluation >= beta:
+        if score >= beta:
             return beta
         
-        if evaluation > alpha:
-            alpha = evaluation
+        alpha = max(alpha, score)
 
     return alpha
 
@@ -353,6 +351,7 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
     positions += 1
 
     alpha_orig = alpha
+    beta_orig = beta
     key = hash(b)
 
     entry = TT.get(key)
@@ -407,7 +406,7 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
 
     if value <= alpha_orig:
         flag = UPPER
-    elif value >= beta:
+    elif value >= beta_orig:
         flag = LOWER
     else:
         flag = EXACT
