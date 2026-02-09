@@ -180,7 +180,7 @@ MIRROR_BOARD = [
 
 INF = float('inf')
 
-TIME_LIMIT = 3
+TIME_LIMIT = 5
 DEPTH_LIMIT = 100
 CAPTURE_EXTENSION = True
 USE_UCI = "--uci" in sys.argv
@@ -506,12 +506,7 @@ def main() -> None:
 
 if __name__ == '__main__':
     if not USE_UCI:
-        #try:
-            main()
-        #except Exception as e:
-        #    print(e)
-        #    print(KILLER1)
-        #    print(KILLER2)
+        main()
         #test_cases()
     else:
         uci_loop()
