@@ -40,7 +40,6 @@ PHASE_VALUES = {
 }
 
 # the bonus tables for the middlegame and endgame
-# TODO: Get better PSQTs
 MIDDLEGAME_BONUS = {
     'p': [
         0,  0,  0,  0,  0,  0,  0,  0,
@@ -180,7 +179,7 @@ MIRROR_BOARD = [
 
 INF = float('inf')
 
-TIME_LIMIT = 5
+TIME_LIMIT = 15
 DEPTH_LIMIT = 100
 CAPTURE_EXTENSION = True
 USE_UCI = "--uci" in sys.argv
