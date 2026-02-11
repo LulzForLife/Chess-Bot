@@ -185,6 +185,7 @@ DEPTH_LIMIT = 100
 CAPTURE_EXTENSION = True
 USE_UCI = "--uci" in sys.argv
 OPENING_AI_PLY = 10
+CASTLING_AVAILABLE_BONUS = 50
 
 EXACT, LOWER, UPPER = 0, 1, 2
 TT: dict[int, TTEntry] = {}
@@ -259,7 +260,7 @@ def uci_loop():
 
         elif parts[0] == "go":
             # Pass the board to your search function
-            if board.ply() > 20:
+            if board.ply() > OPENING_AI_PLY:
                 move = get_best_move(board, time = TIME_LIMIT)[0]
             else:
                 move = chess.Move.from_uci(predict_move(board))
@@ -290,6 +291,8 @@ def evaluate(b: HashBoard) -> float:
     elif b.is_game_over():
         return 0
     
+    value = 0.0
+
     phase = 0
     for square, piece in b.piece_map().items():
         phase += PHASE_VALUES[piece.symbol().lower()]
@@ -311,6 +314,9 @@ def evaluate(b: HashBoard) -> float:
         if piece.color != b.turn:
             value = -value
         evaluation += value
+    
+    if b.has_kingside_castling_rights(b.turn) or b.has_queenside_castling_rights(b.turn):
+        value += CASTLING_AVAILABLE_BONUS
 
     return evaluation
 
@@ -496,7 +502,7 @@ def main() -> None:
         move = get_user_move(board)
         board.push(move)
         print(board)
-        if board.ply() > 20:
+        if board.ply() > OPENING_AI_PLY:
             print('Bot is thinking...')
             positions = 0
             hits = 0
