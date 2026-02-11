@@ -258,7 +258,10 @@ def uci_loop():
 
         elif parts[0] == "go":
             # Pass the board to your search function
-            move = get_best_move(board, time = TIME_LIMIT)[0]
+            if board.ply() > 20:
+                move = get_best_move(board, time = TIME_LIMIT)[0]
+            else:
+                move = predict_move(board)
             
             # Validation (Good safety net!)
             if move not in board.legal_moves:
