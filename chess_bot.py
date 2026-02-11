@@ -184,6 +184,7 @@ TIME_LIMIT = 15
 DEPTH_LIMIT = 100
 CAPTURE_EXTENSION = True
 USE_UCI = "--uci" in sys.argv
+OPENING_AI_PLY = 10
 
 EXACT, LOWER, UPPER = 0, 1, 2
 TT: dict[int, TTEntry] = {}
