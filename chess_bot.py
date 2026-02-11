@@ -4,6 +4,7 @@ import chess.polyglot as polyglot
 import random
 import sys
 import time as t
+from predict import predict_move
 
 class HashBoard(chess.Board):
     def __init__(self, fen: str | None = STARTING_FEN, *, chess960: bool = False) -> None: # pyright: ignore[reportArgumentType]
@@ -491,16 +492,23 @@ def main() -> None:
         move = get_user_move(board)
         board.push(move)
         print(board)
-        print('Bot is thinking...')
-        positions = 0
-        hits = 0
-        move, evaluation, depth = get_best_move(board, time = TIME_LIMIT)
-        if move == chess.Move.null():
-            break
-        board.push(move)
-        print(board)
-        print(f'Bot played: {move}')
-        print(f'{positions} positions | {hits} hit | evaluation {evaluation / 100} | depth {depth}')
+        if board.ply() > 20:
+            print('Bot is thinking...')
+            positions = 0
+            hits = 0
+            move, evaluation, depth = get_best_move(board, time = TIME_LIMIT)
+            if move == chess.Move.null():
+                break
+            board.push(move)
+            print(board)
+            print(f'Bot played: {move}')
+            print(f'{positions} positions | {hits} hit | evaluation {evaluation / 100} | depth {depth}')
+        else:
+            print('Opening AI is thinking...')
+            move = chess.Move.from_uci(predict_move(board))
+            board.push(move)
+            print(board)
+            print(f'Opening AI played: {move}')
     print('Game over!')
 
 if __name__ == '__main__':
