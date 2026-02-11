@@ -261,7 +261,7 @@ def uci_loop():
             if board.ply() > 20:
                 move = get_best_move(board, time = TIME_LIMIT)[0]
             else:
-                move = predict_move(board)
+                move = chess.Move.from_uci(predict_move(board))
             
             # Validation (Good safety net!)
             if move not in board.legal_moves:
