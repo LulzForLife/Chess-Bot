@@ -260,7 +260,7 @@ def uci_loop():
 
         elif parts[0] == "go":
             # Pass the board to your search function
-            if board.ply() > OPENING_AI_PLY:
+            if board.ply() >= OPENING_AI_PLY:
                 move = get_best_move(board, time = TIME_LIMIT)[0]
             else:
                 move = chess.Move.from_uci(predict_move(board))
@@ -502,7 +502,7 @@ def main() -> None:
         move = get_user_move(board)
         board.push(move)
         print(board)
-        if board.ply() > OPENING_AI_PLY:
+        if board.ply() >= OPENING_AI_PLY:
             print('Bot is thinking...')
             positions = 0
             hits = 0
