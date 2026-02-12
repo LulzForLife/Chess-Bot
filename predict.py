@@ -84,7 +84,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load the model
 model = ChessModel(num_classes=len(move_to_int))
-model.load_state_dict(torch.load("TORCH_100EPOCHS.pth"))
+model.load_state_dict(torch.load("TORCH_100EPOCHS.pth", map_location = device))
 model.to(device)
 model.eval()  # Set the model to evaluation mode (it may be reductant)
 
