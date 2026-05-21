@@ -180,7 +180,7 @@ MIRROR_BOARD = [
 
 INF = float('inf')
 
-TIME_LIMIT = 15
+TIME_LIMIT = 5
 DEPTH_LIMIT = 100
 CAPTURE_EXTENSION = True
 USE_UCI = "--uci" in sys.argv
