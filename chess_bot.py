@@ -180,7 +180,7 @@ MIRROR_BOARD = [
 
 INF = float('inf')
 
-TIME_LIMIT = 15
+TIME_LIMIT = 10
 DEPTH_LIMIT = 100
 CAPTURE_EXTENSION = True
 USE_UCI = "--uci" in sys.argv
@@ -193,7 +193,7 @@ KILLER1 = [None] * 64
 KILLER2 = [None] * 64
 HISTORY = [[0]*64 for _ in range(64)]
 
-positions = 0
+nodes = 0
 hits = 0
 s = 0
 
@@ -337,6 +337,8 @@ def ordered_moves(b: HashBoard, depth: int, tt_move = None):
     return sorted(b.legal_moves, key = score, reverse = True)
 
 def _extend_search(b: HashBoard, alpha: float, beta: float, depth: int = 0) -> float:
+    global nodes
+    nodes += 1
     if b.is_checkmate():
         return -INF
     elif b.is_game_over():
@@ -390,11 +392,10 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
     :return: The position\'s best move and evaluation
     :rtype: float | tuple[chess.Move, float]
     '''
-    global positions, hits
+    global nodes, hits, nodes
+    nodes += 1
     if t.time() - s > TIME_LIMIT:
         raise TimeoutError
-
-    positions += 1
 
     alpha_orig = alpha
     beta_orig = beta
@@ -465,8 +466,9 @@ def _search_moves(b: HashBoard, depth: int, alpha: float, beta: float, eval_only
     return value if eval_only else (best_move, value) # pyright: ignore[reportReturnType]
 
 def get_best_move(b: HashBoard, time: int | float) -> tuple[chess.Move, float, int]:
-    global s
-    '''     
+    global s, nodes
+    nodes = 0
+    '''
     Docstring for get_best_move
     
     :param b: The board to find the best move for
@@ -489,11 +491,16 @@ def get_best_move(b: HashBoard, time: int | float) -> tuple[chess.Move, float, i
         d = depth
         if not USE_UCI:
             print(f'Depth: {depth}', end = '\r')
+        else:
+            elapsed = t.time() - s
+            elapsed_ms = max(1, int(elapsed * 1000))
+            nps = int(nodes / elapsed) if elapsed > 0 else 0
+            print(f"info depth {depth} score {evaluation} nodes {nodes} nps {nps} time {elapsed_ms} pv {best.uci()}", flush=True)
 
     return best, evaluation, d # pyright: ignore[reportPossiblyUnboundVariable, reportReturnType]
 
 def main() -> None:
-    global positions, hits
+    global nodes, hits
 
     board = HashBoard()
     print(board)
@@ -504,7 +511,7 @@ def main() -> None:
         print(board)
         if board.ply() >= OPENING_AI_PLY:
             print('Bot is thinking...')
-            positions = 0
+            nodes = 0
             hits = 0
             move, evaluation, depth = get_best_move(board, time = TIME_LIMIT)
             if move == chess.Move.null():
@@ -512,7 +519,7 @@ def main() -> None:
             board.push(move)
             print(board)
             print(f'Bot played: {move}')
-            print(f'{positions} positions | {hits} hit | evaluation {evaluation / 100} | depth {depth}')
+            print(f'{nodes} positions | {hits} hit | evaluation {evaluation / 100} | depth {depth}')
         else:
             print('Opening AI is thinking...')
             move = chess.Move.from_uci(predict_move(board))
